@@ -1,3 +1,9 @@
-Based on RndMnkIII's NES Analogizer v1.1.0, adapted from agg23's NES core. Adds Composite Blend to the Pocket and Analogizer RGB paths: Off, Kitrinx Style, NTSC Light/Medium/Strong, and PAL Light/Medium/Strong/Strong+. The filter approximates luma/chroma bandwidth effects in RGB. Configure Analogizer with analogizer.bin in /Assets/analogizer/common.
+NES Composite Blend by snckrz
+Luma/chroma filtering for Pocket + Analogizer
 
-Composite Blend filters by snckrz. Analogizer support by RndMnkIII; NES Pocket port by agg23; original core by Ludvig Strigeus, sorgelig, greyrogue, Kitrinx, paulb-nl, and many others.
+Setup: /Assets/analogizer/common/
+analogizer.bin
+
+Analogizer: RndMnkIII; Pocket port: agg23.
+NES: Ludvig Strigeus, sorgelig, greyrogue,
+Kitrinx, paulb-nl and other contributors.
