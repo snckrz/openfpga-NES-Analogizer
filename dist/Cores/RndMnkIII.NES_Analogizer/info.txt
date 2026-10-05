@@ -1,8 +1,3 @@
-Modified to support the Analogizer adapter by RndMnkIII: uses analogizer.bin configuration file from /Assets/analogizer/common. Use Pupdate or AnalogizerConfigurator
-to generate the config file.
+Based on RndMnkIII's NES Analogizer v1.1.0, adapted from agg23's NES core. Adds Composite Blend to the Pocket and Analogizer RGB paths: Off, Kitrinx Style, NTSC Light/Medium/Strong, and PAL Light/Medium/Strong/Strong+. The filter approximates luma/chroma bandwidth; it is not a composite waveform encoder. Configure Analogizer with analogizer.bin in /Assets/analogizer/common.
 
-Port by agg23. Core by Ludvig Strigeus, sorgelig, greyrogue, Kitrinx, paulb-nl, and many others.
-
-Nintendo Entertainment System (NES), referred to as the Famicom in Japan was the first major home console produced by Nintendo. This console made gaming a household name, and is still popular to this day
-
-Core supports 4 controllers (when connected to the Dock), cartridge saves, and most mappers. Please report all issues to agg23, as most likely any issues experienced are issues with the port, not the core.
+Composite Blend filters by snckrz. Analogizer support by RndMnkIII; NES Pocket port by agg23; original core by Ludvig Strigeus, sorgelig, greyrogue, Kitrinx, paulb-nl, and many others.

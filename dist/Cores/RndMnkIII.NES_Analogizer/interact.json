@@ -3,6 +3,54 @@
     "magic": "APF_VER_1",
     "variables": [
       {
+        "name": "Composite Blend",
+        "id": 49,
+        "type": "list",
+        "enabled": true,
+        "address": "0x214",
+        "persist": true,
+        "writeonly": true,
+        "defaultval": 0,
+        "options": [
+          {
+            "value": 0,
+            "name": "Off"
+          },
+          {
+            "value": 1,
+            "name": "Kitrinx Style"
+          },
+          {
+            "value": 2,
+            "name": "NTSC Light"
+          },
+          {
+            "value": 3,
+            "name": "NTSC Medium"
+          },
+          {
+            "value": 4,
+            "name": "NTSC Strong"
+          },
+          {
+            "value": 5,
+            "name": "PAL Light"
+          },
+          {
+            "value": 6,
+            "name": "PAL Medium"
+          },
+          {
+            "value": 7,
+            "name": "PAL Strong"
+          },
+          {
+            "value": 8,
+            "name": "PAL Strong+"
+          }
+        ]
+      },
+      {
         "name": "Reset core",
         "id": 10,
         "type": "action",

@@ -1,25 +1,20 @@
 
 # Pocket openFPGA NES Core with support for Analogizer-FPGA adapter
-* Analogizer V1.0.0 [30/03/2024]: Initial Analogizer support release
-* Analogizer V1.0.1 [13/07/2024]: Added support for Y/C video and Scandoubler RGBHV. The savestate support was removed to make room for Analogizer features.
-* Analogizer V1.0.2 [12/02/2025]: Added support for Analogizer configuration file, PSX SNAC gamecontrollers and NES SNAC Zapper lightgun.
-* Analogizer V1.0.3 [27/02/2025]: Using customized Chip32 loader code the core recovers the savestate support.
-This method divides the core in two bitstreams each one with a specific support for mappers. The Chip32 loader
-check the NES ROM header al calculates the mapper code and load the bistream with the required mapper. This
-reduces the logic resources required (divides the mapper code into two blocks). Thanks to @agg23 by his help.
-This is based in the method used by @agg23 for the openFPGA SNES core.
-* Analogizer V1.0.4 [05/03/2025]: Using customized Chip32 loader enables to run at correct speed PAL roms. This is based entirely on NES ROMS with 2.0 header or default NTSC settings will be used.
-Please make sure your PAL ROM has an iNES 2.0 header before reporting that the PAL ROM is not working properly. You can use this tool to check the ROM, the ma: [NES Mapper](https://www.romhacking.net/download/utilities/683/). Most NES ROMs already support this format.
-* Analogizer V1.0.5 [06/03/2025]: Fixed broken PAL bitstream support.
-* Analogizer v1.0.6 [06/03/2025]: Added PAL bitstream for Set2 mappers (needed for Castlevania III PAL for example).
-* Analogizer v1.0.7 [07/03/2025]: Fixed Savestates again (was an error reintroduced with 1.0.5).
-* Analogizer v1.0.8 [11/03/2025]: Restored Extended Sprites support. I had inadvertently disabled extended sprite support at the core level (hack). I have enabled it but this has made me do a lot of flourishes to make room for this functionality along with everything else.
-* Analogizer v1.0.9 [11/03/2025]: Added global switch to disable/enable Analogizer from Pocket Core Menu. When
-  is disabled the SNAC controllers settings are ignored and the Pocket default controls are used. This applies
-  to the Blank Pocket Screen setting also, the video is forwarded toward the Pocket screen instead the Analogizer
-  settings that was stored.
-* Analogizer v1.1.0 [22/03/2025]: Added support to AnalogizerConfigurator/Pupdate regional settings.
-  
+
+## Composite Blend
+
+This is my fork of [RndMnkIII's NES Analogizer v1.1.0](https://github.com/RndMnkIII/openfpga-NES-Analogizer/tree/c9bb903cebf4da1d449a16eed42f3a3fdb04f5ce), based on [agg23's NES core](https://github.com/agg23/openFPGA-NES). It adds nine Composite Blend modes to the Pocket and Analogizer RGB video paths.
+
+The filter approximates luma as `Y = (R + 2G + B) / 4`, then derives `Cr = R - Y` and `Cb = B - Y`. It applies selectable horizontal filters to those components, reconstructs RGB, and clips the result to the 8-bit range. PAL modes blend chroma with the previous scanline; luma is not filtered vertically. This is a bandwidth-filtering approximation: it does not encode or decode a composite waveform or model a color subcarrier, so it is not a full NTSC/PAL composite-video simulation.
+
+| Composite Blend | Behavior |
+| --- | --- |
+| Off | Unfiltered RGB |
+| Kitrinx Style | Simple horizontal RGB averaging, adapted from [Kitrinx's `cofi.sv`](https://github.com/opengateware/openFPGA-Genesis/blob/0032b2c6904131f11496396763a3d8b1a4a19445/src/fpga/core/rtl/cofi.sv) |
+| NTSC Light / Medium / Strong | Increasing horizontal luma/chroma filtering |
+| PAL Light / Medium / Strong / Strong+ | NTSC-style filtering with previous-line chroma blending |
+
+---
 For the PAL/NTSC/Dendy ROM detection the Chip32 loader reads the NES game ROM header previously to load the core to decode the system type, this needs a iNES2.0 ROM header. If the ROM that are you using is of an older header type or not `analogizer.bin` file is detected the core will boot into NTSC mode. 
 
 The Loader uses the regional settings from `analogizer.bin`file to determine the mode the ROM is loaded/NES hardware runs. 
@@ -132,16 +127,17 @@ Please report any issues encountered to this repo. Most likely any problems are 
 
 ### Easy mode
 
-I highly recommend the updater tools by [@mattpannella](https://github.com/mattpannella) and [@RetroDriven](https://github.com/RetroDriven). If you're running Windows, use [the RetroDriven GUI](https://github.com/RetroDriven/Pocket_Updater), or if you prefer the CLI, use [the mattpannella tool](https://github.com/mattpannella/pocket_core_autoupdate_net). Either of these will allow you to automatically download and install openFPGA cores onto your Analogue Pocket. Go donate to them if you can
+I highly recommend the updater tools by [@mattpannella](https://github.com/mattpannella) and [@RetroDriven](https://github.com/RetroDriven). If you're running Windows, use [the RetroDriven GUI](https://github.com/RetroDriven/Pocket_Updater), or if you prefer the CLI, use [the mattpannella tool](https://github.com/mattpannella/pocket_core_autoupdate_net). Either tool installs the published upstream core; the filter in this fork is not included.
 
 ### Manual mode
-To install the core, copy the `Assets`, `Cores`, and `Platform` folders over to the root of your SD card. Please note that Finder on macOS automatically _replaces_ folders, rather than merging them like Windows does, so you have to manually merge the folders.
+
+To test this fork, copy the `Assets`, `Cores`, and `Platforms` folders from the matching private test package to the SD root, then copy its four matching bitstreams to `Cores/RndMnkIII.NES_Analogizer`. Back up that core folder first. Preserve your Analogizer configuration and custom palettes. Restore the backup to revert. On macOS, merge folders manually because Finder replaces them.
 
 ## Usage
 
 ROMs should be placed in `/Assets/nes/common`
 
-PAL ROMs should boot, but there will be timing and sound issues as the core currently doesn't properly support PAL (proper support coming soon). I highly recommend you do not play PAL games, and instead use NTSC games (if they exist) at this time.
+The loader uses iNES 2.0 region metadata and Analogizer regional settings to choose NTSC, PAL, or Dendy behavior. ROMs without an iNES 2.0 header bypass region selection and boot in NTSC mode.
 
 ## Features
 
@@ -151,11 +147,11 @@ Core supports four players/controllers via the Analogue Dock. To enable four pla
 
 ### Mappers
 
-This core has pairity with the MiSTer core's mapper support. [See the full breakdown here](https://github.com/MiSTer-devel/NES_MiSTer#supported-mappers). Please note that the VRC7 expansion audio chip is not supported in this core (but is in MiSTer) due to space constraints.
+This core has parity with the MiSTer core's mapper support. [See the full breakdown here](https://github.com/MiSTer-devel/NES_MiSTer#supported-mappers). Please note that the VRC7 expansion audio chip is not supported in this core (but is in MiSTer) due to space constraints.
 
 ### Save States/Sleep + Wake and Saves
 
-Are not supported with Analogizer version of NES core because the Pocket FPGA size don't allow to use Analogizer features and saves at the same time.
+Memories save/load and Sleep + Wake work in the tested Pocket setup; mapper-wide compatibility has not been established. Cartridge saves have not been tested with this fork.
 
 ### Controller Turbo
 
@@ -220,4 +216,4 @@ Core supports virtual lightguns by enabling the `Use Zapper > Emulated Zapper (S
    `.\build.ps1 PAL_SET2`
    The generated *.rev bitstream files are stored in the 'core_bitstreams' folder
 5) Copy the contents from 'pkg\pocket' folder to the root of Pocket SD Card.
-6) Copy the bitstream files from 'core_bitstreams' to the Core folder 'Cores\RndMnkIII.NES' in the Pocket SD Card.
+6) Copy the bitstream files from `core_bitstreams` to `Cores\RndMnkIII.NES_Analogizer` on the Pocket SD card.

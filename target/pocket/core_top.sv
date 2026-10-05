@@ -365,6 +365,9 @@ end
         12'h210: begin
           square_pixels <= bridge_wr_data[0];
         end
+        12'h214: begin
+          composite_blend_mode <= bridge_wr_data[3:0];
+        end
         12'h300: begin
           multitap_enabled <= bridge_wr_data[0];
         end
@@ -697,6 +700,7 @@ end
   reg hide_overscan = 0;
   reg [1:0] mask_vid_edges = 0;
   reg square_pixels = 0;
+  reg [3:0] composite_blend_mode = 0;
    reg allow_extra_sprites = 0;
    reg [2:0] selected_palette = 0;
    wire external_reset = reset_delay > 0;
@@ -795,7 +799,7 @@ wire       pocket_blank_screen;
   //create aditional switch to blank Pocket screen.
   wire [23:0] video_rgb_pocket;
   //If Analogizer is disabled globally then show the video output on the Pocket screen
-  assign video_rgb_pocket = (pocket_blank_screen && !analogizer_ena_s) ? 24'h000000: video_rgb_nes;
+  assign video_rgb_pocket = (pocket_blank_screen && !analogizer_ena_s) ? 24'h000000: video_rgb_composite;
 
 //switch between Analogizer SNAC and Pocket Controls for P1-P4 (P3,P4 when uses PCEngine Multitap)
   wire [15:0] p1_btn, p2_btn, p3_btn, p4_btn;
@@ -885,7 +889,7 @@ always @(posedge clk_ppu_21_47) begin
     end
   end
 
-wire SYNC = ~^{video_hs_nes, video_vs_nes};
+wire SYNC = ~^{analog_hsync, analog_vsync};
 
 //*** Analogizer Interface V1.0 ***
 //reg analogizer_ena;
@@ -929,14 +933,14 @@ generate
 
         //Video interface
         .video_clk(clk_analogizer),
-        .R(video_rgb_nes[23:16]),
-        .G(video_rgb_nes[15:8]),
-        .B(video_rgb_nes[7:0]),
-        .Hblank(h_blank),
-        .Vblank(v_blank),
-        .BLANKn(de),
-        .Hsync(video_hs_nes), //composite SYNC on HSync.
-        .Vsync(video_vs_nes),
+        .R(video_rgb_analog[23:16]),
+        .G(video_rgb_analog[15:8]),
+        .B(video_rgb_analog[7:0]),
+        .Hblank(analog_hblank),
+        .Vblank(analog_vblank),
+        .BLANKn(analog_de),
+        .Hsync(analog_hsync), //composite SYNC on HSync.
+        .Vsync(analog_vsync),
         .Csync(SYNC),
 
         //openFPGA Bridge interface
@@ -1000,14 +1004,14 @@ generate
 
         //Video interface
         .video_clk(clk_analogizer),
-        .R(video_rgb_nes[23:16]),
-        .G(video_rgb_nes[15:8]),
-        .B(video_rgb_nes[7:0]),
-        .Hblank(h_blank),
-        .Vblank(v_blank),
-        .BLANKn(de),
-        .Hsync(video_hs_nes), //composite SYNC on HSync.
-        .Vsync(video_vs_nes),
+        .R(video_rgb_analog[23:16]),
+        .G(video_rgb_analog[15:8]),
+        .B(video_rgb_analog[7:0]),
+        .Hblank(analog_hblank),
+        .Vblank(analog_vblank),
+        .BLANKn(analog_de),
+        .Hsync(analog_hsync), //composite SYNC on HSync.
+        .Vsync(analog_vsync),
         .Csync(SYNC),
 
         //openFPGA Bridge interface
@@ -1202,6 +1206,40 @@ endgenerate
   wire video_vs_nes;
   wire [23:0] video_rgb_nes;
 
+  // All styles share aligned RGB/sync/blanking before either video consumer.
+  wire [3:0] composite_blend_video;
+  synch_3 #(.WIDTH(4)) composite_settings_s (
+      .i(composite_blend_mode), .o(composite_blend_video),
+      .clk(clk_video_5_37), .rise(), .fall()
+  );
+  wire [23:0] video_rgb_composite_raw;
+  reg [23:0] video_rgb_composite = 24'h000000;
+  wire [23:0] video_rgb_analog = video_rgb_composite;
+  wire analog_hblank_raw, analog_vblank_raw, analog_hsync_raw, analog_vsync_raw;
+  reg analog_hblank = 1'b1;
+  reg analog_vblank = 1'b1;
+  reg analog_hsync = 1'b0;
+  reg analog_vsync = 1'b0;
+  wire analog_de = ~(analog_hblank | analog_vblank);
+  // Register all aligned filter outputs together before either video consumer.
+  // This keeps the PAL line-buffer result off the long path into the Analogizer.
+  always @(posedge clk_video_5_37) begin
+      video_rgb_composite <= video_rgb_composite_raw;
+      analog_hblank <= analog_hblank_raw;
+      analog_vblank <= analog_vblank_raw;
+      analog_hsync <= analog_hsync_raw;
+      analog_vsync <= analog_vsync_raw;
+  end
+  composite_blend composite_video (
+      .clk(clk_video_5_37), .mode(composite_blend_video),
+      .hblank_in(h_blank), .vblank_in(v_blank),
+      .hsync_in(video_hs_nes), .vsync_in(video_vs_nes),
+      .dotclk_in(1'b0), .interlace_in(1'b0), .rgb_in(video_rgb_nes),
+      .rgb_out(video_rgb_composite_raw),
+      .hblank_out(analog_hblank_raw), .vblank_out(analog_vblank_raw),
+      .hsync_out(analog_hsync_raw), .vsync_out(analog_vsync_raw), .dotclk_out()
+  );
+
   reg video_de_reg;
   reg video_hs_reg;
   reg video_vs_reg;
@@ -1219,7 +1257,7 @@ endgenerate
   reg vs_prev;
   reg de_prev;
 
-  wire de = ~(h_blank || v_blank);
+  wire de = analog_de;
   wire [23:0] video_slot_rgb = {9'b0, hide_overscan_with_region, square_pixels, 10'b0, 3'b0};
 
   always @(posedge clk_video_5_37) begin
@@ -1243,15 +1281,15 @@ endgenerate
         video_hs_reg <= 1;
       end
 
-      if (~hs_prev && video_hs_nes) begin
+      if (~hs_prev && analog_hsync) begin
         // HSync went high. Delay by 3 cycles to prevent overlapping with VSync
         hs_delay <= 7;
       end
 
       // Set VSync to be high for a single cycle on the rising edge of the VSync coming out of the core
-      video_vs_reg <= ~vs_prev && video_vs_nes;
-      hs_prev <= video_hs_nes;
-      vs_prev <= video_vs_nes;
+      video_vs_reg <= ~vs_prev && analog_vsync;
+      hs_prev <= analog_hsync;
+      vs_prev <= analog_vsync;
       de_prev <= de;
   end
 

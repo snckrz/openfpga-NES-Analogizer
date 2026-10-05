@@ -10,12 +10,14 @@ set_clock_groups -asynchronous \
  -group { clk_74b } \
  -group { ic|mp1|mf_pllbase_inst|altera_pll_i|*[0].*|divclk \
           ic|mp1|mf_pllbase_inst|altera_pll_i|*[1].*|divclk \
+          ic|mp1|mf_pllbase_inst|altera_pll_i|*[2].*|divclk \
           ic|mp1|mf_pllbase_inst|altera_pll_i|*[4].*|divclk } \
- -group { ic|mp1|mf_pllbase_inst|altera_pll_i|*[2].*|divclk } \
  -group { ic|mp1|mf_pllbase_inst|altera_pll_i|*[3].*|divclk } \
  -group { ic|audio_mixer|audio_pll|mf_audio_pll_inst|altera_pll_i|general[0].gpll~PLL_OUTPUT_COUNTER|divclk \
           ic|audio_mixer|audio_pll|mf_audio_pll_inst|altera_pll_i|general[1].gpll~PLL_OUTPUT_COUNTER|divclk }
 
+# The NES pixel and Analogizer clocks are related outputs of the same PLL.
+# Time their crossings, including the Composite Blend pixel capture stage.
 derive_clock_uncertainty
 
 set_multicycle_path -from {ic|nes|sdram|*} -to [get_clocks {ic|mp1|mf_pllbase_inst|altera_pll_i|*[1].*|divclk}] -start -setup 2
